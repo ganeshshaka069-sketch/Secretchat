@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Just Us</title>
+<style>
+:root{--bg1:#ffe3ec;--bg2:#e6dcff;--card:rgba(255,255,255,.72);--text:#3a2a3f;--muted:#8a7790;--me:#ff7aa8;--me-t:#fff;--them:#fff;--them-t:#3a2a3f;--line:rgba(120,80,140,.15);box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:light}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg1:#2a1530;--bg2:#171434;--card:rgba(40,28,56,.78);--text:#f6e9fb;--muted:#a995b5;--me:#d94f86;--them:#3a2b52;--them-t:#f6e9fb;--line:rgba(255,255,255,.1);color-scheme:dark}}
+:root[data-theme="dark"]{--bg1:#2a1530;--bg2:#171434;--card:rgba(40,28,56,.78);--text:#f6e9fb;--muted:#a995b5;--me:#d94f86;--them:#3a2b52;--them-t:#f6e9fb;--line:rgba(255,255,255,.1);color-scheme:dark}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{font-family:"Quicksand",system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--text);background:linear-gradient(135deg,var(--bg1),var(--bg2));background-attachment:fixed;display:flex;align-items:center;justify-content:center}
+.card{width:min(440px,94vw);background:var(--card);backdrop-filter:blur(14px);border:1px solid var(--line);border-radius:28px;box-shadow:0 20px 60px rgba(160,80,140,.18)}
+#login{padding:34px 28px;text-align:center}
+#login h1{font-family:"Georgia",serif;font-weight:400;font-size:2rem;margin:0 0 4px}
+#login p{color:var(--muted);margin:0 0 22px;font-size:.95rem}
+.heart{font-size:2.4rem;animation:beat 1.6s infinite}
+@keyframes beat{0%,100%{transform:scale(1)}50%{transform:scale(1.15)}}
+input{width:100%;padding:14px 16px;margin-bottom:12px;border-radius:16px;border:1px solid var(--line);background:rgba(255,255,255,.5);color:var(--text);font:inherit;outline:none}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) input{background:rgba(255,255,255,.07)}}
+input:focus{border-color:var(--me)}
+button{font:inherit;cursor:pointer;border:0}
+.primary{width:100%;padding:14px;border-radius:16px;background:linear-gradient(135deg,#ff8fb4,#b48cff);color:#fff;font-weight:600}
+#err{color:#e0457b;min-height:1.3em;font-size:.88rem;margin-top:10px}
+#chat{display:none;flex-direction:column;height:min(780px,96%);overflow:hidden}
+header{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--line)}
+.who{display:flex;flex-direction:column}
+.who b{font-size:1.05rem}
+.status{font-size:.78rem;color:var(--muted)}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#bbb;margin-right:6px}
+.dot.on{background:#4cd68a}
+.out{background:transparent;color:var(--muted);border:1px solid var(--line);padding:8px 14px;border-radius:14px;font-size:.85rem}
+#msgs{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:8px}
+.note{text-align:center;color:var(--muted);font-size:.8rem;margin:auto 0}
+.b{max-width:78%;padding:10px 14px;border-radius:20px;line-height:1.4;word-wrap:break-word;white-space:pre-wrap;animation:pop .2s ease}
+@keyframes pop{from{opacity:0;transform:translateY(6px)}}
+.b.me{align-self:flex-end;background:var(--me);color:var(--me-t,#fff);border-bottom-right-radius:6px}
+.b.them{align-self:flex-start;background:var(--them);color:var(--them-t);border-bottom-left-radius:6px}
+.b small{display:block;font-size:.66rem;opacity:.7;margin-top:3px}
+form{display:flex;gap:10px;padding:12px;border-top:1px solid var(--line)}
+form input{margin:0;flex:1}
+.send{width:48px;border-radius:50%;background:linear-gradient(135deg,#ff8fb4,#b48cff);color:#fff;font-size:1.1rem}
+.send:disabled{opacity:.4}
+</style>
+</head>
+<body>
+<div id="login" class="card">
+  <div class="heart">💗</div>
+  <h1>Just Us</h1>
+  <p>A little private corner for two.</p>
+  <input id="u" placeholder="Username" autocomplete="off" autocapitalize="none">
+  <input id="p" type="password" placeholder="Password">
+  <button class="primary" id="go">Enter</button>
+  <div id="err"></div>
+</div>
+
+<div id="chat" class="card">
+  <header>
+    <div class="who"><b id="partner">Waiting…</b><span class="status"><span class="dot" id="dot"></span><span id="st">offline</span></span></div>
+    <button class="out" id="logout">Log out 🔒</button>
+  </header>
+  <div id="msgs"><div class="note" id="hello">Nothing is saved anywhere.<br>Logging out wipes this chat for both of you. ✨</div></div>
+  <form id="f"><input id="t" placeholder="Write something sweet…" autocomplete="off"><button class="send" id="sb" disabled>➤</button></form>
+</div>
+
+<script>
+// Accounts: SHA-256 of "duo|username|password". Passwords are never stored in this file.
+const ACCOUNTS={
+  "honey":"a93ef6b4718af9ebfb8dd7e19c97858ad713412f554baad12435814cbecc27c4",
+  "bunny":"149bc5b2429cb33d67010bd4c551084575e0b2d607e3ceffeb3e40468b7db9cf"
+};
+const $=id=>document.getElementById(id);
+let room=null,me=null,unsubs=[],seen=new Set();
+
+async function sha(s){const b=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(s));return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,"0")).join("")}
+
+function wipe(){
+  $("msgs").innerHTML='<div class="note">Chat cleared. 🌙</div>';
+  seen.clear();
+}
+function setStatus(){
+  if(!room||!me)return;
+  const other=room.peers?.().find(p=>!p.isMe&&p.presence&&ACCOUNTS[p.presence.u]&&p.presence.u!==me);
+  $("partner").textContent=other?other.presence.u:"Waiting…";
+  $("dot").className="dot"+(other?" on":"");
+  $("st").textContent=other?"online":"waiting for your person";
+  $("sb").disabled=!room.connected?.()||!other;
+}
+function add(text,mine,who){
+  $("hello")?.remove();
+  const d=document.createElement("div");d.className="b "+(mine?"me":"them");
+  d.textContent=text;
+  const s=document.createElement("small");s.textContent=new Date().toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"});
+  d.appendChild(s);$("msgs").appendChild(d);$("msgs").scrollTop=1e9;
+}
+
+async function login(){
+  const u=$("u").value.trim().toLowerCase(),p=$("p").value;
+  $("err").textContent="";
+  if(!ACCOUNTS[u]||(await sha("duo|"+u+"|"+p))!==ACCOUNTS[u]){$("err").textContent="Wrong username or password.";return}
+  let claude_room=null;
+  try{claude_room=await window.claude?.use("room")}catch(e){}
+  if(!claude_room){$("err").textContent="Can't connect right now. Open this page from your claude.ai link.";return}
+  room=claude_room;
+  await room.presence({u});
+  // only one session per account
+  const dupe=room.peers().find(x=>!x.isMe&&x.presence&&x.presence.u===u);
+  if(dupe){await room.presence({u:null});$("err").textContent="This account is already logged in elsewhere.";return}
+  me=u;$("p").value="";
+  $("login").style.display="none";$("chat").style.display="flex";
+  unsubs.push(room.onPeers(setStatus),room.onConnection(setStatus));
+  unsubs.push(room.on("msg",m=>{
+    const d=m.data;if(!d||typeof d.t!=="string"||!ACCOUNTS[d.u]||seen.has(d.id))return;
+    seen.add(d.id);add(d.t.slice(0,1000),m.isMe&&m.sameTab,d.u);
+    if(!m.isMe&&"vibrate" in navigator)navigator.vibrate?.(30);
+  }));
+  unsubs.push(room.on("bye",m=>{
+    if(m.isMe||!me)return;
+    wipe();
+  }));
+  setStatus();
+}
+
+async function logout(){
+  const r=room;
+  if(r&&me){try{await r.emit("bye",{u:me})}catch(e){}try{await r.presence({u:null})}catch(e){}}
+  unsubs.forEach(f=>{try{f()}catch(e){}});unsubs=[];
+  me=null;room=null;wipe();$("t").value="";
+  $("chat").style.display="none";$("login").style.display="block";$("u").value="";
+}
+
+$("go").onclick=login;
+$("p").onkeydown=e=>{if(e.key==="Enter")login()};
+$("logout").onclick=logout;
+$("f").onsubmit=async e=>{
+  e.preventDefault();
+  const t=$("t").value.trim();if(!t||!room||!me)return;
+  $("t").value="";
+  try{await room.emit("msg",{u:me,t,id:crypto.randomUUID()})}catch(err){}
+};
+// closing the tab also counts as logging out
+addEventListener("pagehide",()=>{if(room&&me){try{room.emit("bye",{u:me});room.presence({u:null})}catch(e){}}});
+</script>
+</body>
+</html>
